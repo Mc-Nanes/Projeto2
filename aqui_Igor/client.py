@@ -49,7 +49,7 @@ class BettingClient:
         self.canvas = tk.Canvas(mid_wrapper, width=500, height=250, bg='black', highlightthickness=0)
         self.canvas.grid(row=0, column=0, columnspan=2)
 
-        self.plane_image = Image.open("plane.png")
+        self.plane_image = Image.open("aqui_Igor/plane.png")
         self.plane_image = self.plane_image.resize((50, 50), Image.ANTIALIAS)
         self.plane_photo = ImageTk.PhotoImage(self.plane_image)
         self.plane_id = self.canvas.create_image(50, 125, image=self.plane_photo)
