@@ -1,7 +1,7 @@
 import socket
 import threading
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import messagebox
 from PIL import Image, ImageTk
 
 class BettingClient:
@@ -21,52 +21,51 @@ class BettingClient:
 
         self.receiver_thread = threading.Thread(target=self.receive_messages)
         self.receiver_thread.start()
-        self.client.send("BALANCE|".encode())  # Solicitar o saldo inicial do servidor
+        self.client.send("BALANCE|".encode())
 
     def setup_ui(self):
-        style = ttk.Style()
-        style.configure('TLabel', foreground='white', background='black', font=('Exo 2', 14))
-        style.configure('TButton', foreground='black', background='red', font=('Exo 2', 14, 'bold'))
-        style.configure('TEntry', font=('Exo 2', 14))
+        label_font = ('Arial', 14, 'bold')
+        button_font = ('Arial', 16, 'bold')
+        entry_font = ('Arial', 16)
 
-        frame = ttk.Frame(self.root, padding="10 10 10 10", style="TFrame")
-        frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        # Balance display
+        self.balance_label = tk.Label(self.root, text=f"BALANCE: {self.balance_var.get()}€", fg='#00FF00', bg='black', font=label_font)
+        self.balance_label.pack(pady=10)
 
-        header = ttk.Frame(frame, style="TFrame")
-        header.grid(row=0, column=0, columnspan=2, pady=10)
+        # Previous multipliers frame
+        self.multipliers_frame = tk.Frame(self.root, bg='black')
+        self.multipliers_frame.pack(pady=10)
 
-        self.last_counters = ttk.Frame(header, style="TFrame")
-        self.last_counters.grid(row=0, column=0, columnspan=2, pady=10)
+        for multiplier in self.previous_multipliers:
+            lbl = tk.Label(self.multipliers_frame, text=f"{multiplier:.2f}x", fg='#00FFFF', bg='black', font=label_font)
+            lbl.pack(side=tk.LEFT, padx=5)
 
-        balance_label = ttk.Label(header, text="BALANCE:", style="TLabel", font=('Exo 2', 16, 'bold'), foreground='green')
-        balance_label.grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
-        balance_amount = ttk.Label(header, textvariable=self.balance_var, style="TLabel", font=('Exo 2', 16, 'bold'), foreground='white')
-        balance_amount.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
-
-        mid_wrapper = ttk.Frame(frame, style="TFrame")
-        mid_wrapper.grid(row=1, column=0, columnspan=2, pady=20)
-
-        self.canvas = tk.Canvas(mid_wrapper, width=500, height=250, bg='black', highlightthickness=0)
-        self.canvas.grid(row=0, column=0, columnspan=2)
+        # Canvas with plane image
+        self.canvas = tk.Canvas(self.root, width=500, height=250, bg='black', highlightthickness=0)
+        self.canvas.pack(pady=20)
         self.plane_image = Image.open("aqui_Igor/plane.png")
         self.plane_image = self.plane_image.resize((50, 50), Image.LANCZOS)
         self.plane_photo = ImageTk.PhotoImage(self.plane_image)
         self.plane_id = self.canvas.create_image(50, 125, image=self.plane_photo)
 
-        counter_label = ttk.Label(mid_wrapper, textvariable=self.multiplier_var, style="TLabel", font=('Exo 2', 42, 'bold'), foreground='white')
-        counter_label.grid(row=1, column=0, columnspan=2, pady=20)
+        # Current multiplier display
+        self.current_multiplier_label = tk.Label(self.root, textvariable=self.multiplier_var, fg='white', bg='black', font=('Arial', 32, 'bold'))
+        self.current_multiplier_label.pack(pady=20)
 
-        bottom_wrapper = ttk.Frame(frame, style="TFrame")
-        bottom_wrapper.grid(row=2, column=0, columnspan=2, pady=20)
+        # Bet input and buttons
+        self.bet_frame = tk.Frame(self.root, bg='black')
+        self.bet_frame.pack(pady=10)
+        self.bet_entry = tk.Entry(self.bet_frame, textvariable=self.bet_amount_var, font=entry_font, width=10)
+        self.bet_entry.pack(side=tk.LEFT, padx=10)
+        self.bet_button = tk.Button(self.bet_frame, text="BET", bg='#FF007F', fg='white', font=button_font, command=self.place_bet)
+        self.bet_button.pack(side=tk.LEFT, padx=10)
 
-        bet_input = ttk.Entry(bottom_wrapper, textvariable=self.bet_amount_var, style="TEntry")
-        bet_input.grid(row=0, column=0, padx=10, pady=10)
+        self.cashout_button = tk.Button(self.root, text="CASH OUT", bg='#FF007F', fg='white', font=button_font, command=self.cash_out, state=tk.DISABLED)
+        self.cashout_button.pack(pady=10)
 
-        self.bet_button = ttk.Button(bottom_wrapper, text="BET", command=self.place_bet, style="TButton")
-        self.bet_button.grid(row=0, column=1, padx=10, pady=10)
-
-        self.cashout_button = ttk.Button(bottom_wrapper, text="CASH OUT", command=self.cash_out, state=tk.DISABLED, style="TButton")
-        self.cashout_button.grid(row=1, column=0, columnspan=2, pady=10)
+        # Status label
+        self.status_label = tk.Label(self.root, text="Wait for the next round", fg='red', bg='black', font=label_font)
+        self.status_label.pack(pady=10)
 
     def receive_messages(self):
         buffer = ""
@@ -84,9 +83,9 @@ class BettingClient:
         if message.startswith("MULTIPLIER"):
             multiplier = message.split()[1]
             self.multiplier_var.set(f"{multiplier}x")
-            self.canvas.coords(self.plane_id, float(multiplier) * 50, 125)
+            self.update_plane_position(float(multiplier))
         elif message == "STOPPED":
-            self.canvas.coords(self.plane_id, 50, 125)
+            self.reset_plane_position()
             multiplier = float(self.multiplier_var.get().replace('x', ''))
             self.previous_multipliers.append(multiplier)
             self.update_previous_multipliers()
@@ -98,6 +97,7 @@ class BettingClient:
         elif message.startswith("BALANCE"):
             balance = float(message.split()[1])
             self.balance_var.set(f"{balance:.2f}")
+            self.balance_label.config(text=f"BALANCE: {self.balance_var.get()}€")
         elif message == "GAME_RUNNING":
             messagebox.showinfo("Betting Game", "A game is already running. Please wait for the next round.")
         elif message == "INSUFFICIENT_FUNDS":
@@ -109,6 +109,15 @@ class BettingClient:
         elif message.startswith("CLIENTS_CONNECTED"):
             clients_connected = int(message.split()[1])
             print(f"Clients connected: {clients_connected}")
+
+    def update_plane_position(self, multiplier):
+        new_x = multiplier * 50
+        if new_x > self.canvas.winfo_width():
+            new_x = new_x % self.canvas.winfo_width()  # Loop back to the start
+        self.canvas.coords(self.plane_id, new_x, 125)
+
+    def reset_plane_position(self):
+        self.canvas.coords(self.plane_id, 50, 125)
 
     def place_bet(self):
         bet_amount = self.bet_amount_var.get()
@@ -125,11 +134,11 @@ class BettingClient:
             self.cashout_button.config(state=tk.DISABLED)
 
     def update_previous_multipliers(self):
-        for widget in self.last_counters.winfo_children():
+        for widget in self.multipliers_frame.winfo_children():
             widget.destroy()
         for multiplier in self.previous_multipliers:
-            multiplier_label = ttk.Label(self.last_counters, text=f"{multiplier:.2f}x", style="TLabel", font=('Exo 2', 16, 'bold'), foreground='yellow')
-            multiplier_label.pack(side=tk.LEFT, padx=5)
+            lbl = tk.Label(self.multipliers_frame, text=f"{multiplier:.2f}x", fg='#00FFFF', bg='black', font=('Arial', 12, 'bold'))
+            lbl.pack(side=tk.LEFT, padx=5)
 
 if __name__ == "__main__":
     root = tk.Tk()
