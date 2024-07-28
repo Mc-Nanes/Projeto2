@@ -2,7 +2,8 @@ import socket
 import threading
 import tkinter as tk
 from tkinter import messagebox
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageOps
+import random
 
 class BettingClient:
     def __init__(self, root):
@@ -14,6 +15,10 @@ class BettingClient:
         self.multiplier_var = tk.StringVar(value="1.00x")
         self.bet_amount_var = tk.StringVar(value="")
         self.previous_multipliers = []
+        self.angle = 0  # Initial angle of rotation
+        self.vertical_offset = 0  # Vertical offset for the waving effect
+        self.direction = 1  # Direction of vertical movement
+        self.plane_speed = 5  # Speed of horizontal movement
 
         self.setup_ui()
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -22,6 +27,8 @@ class BettingClient:
         self.receiver_thread = threading.Thread(target=self.receive_messages)
         self.receiver_thread.start()
         self.client.send("BALANCE|".encode())
+
+        self.rotating = False  # Flag to control rotation
 
     def setup_ui(self):
         label_font = ('Arial', 14, 'bold')
@@ -43,7 +50,7 @@ class BettingClient:
         # Canvas with plane image
         self.canvas = tk.Canvas(self.root, width=500, height=250, bg='black', highlightthickness=0)
         self.canvas.pack(pady=20)
-        self.plane_image = Image.open("aqui_Igor/plane.png")
+        self.plane_image = Image.open("aqui_igor/plane.png")
         self.plane_image = self.plane_image.resize((50, 50), Image.LANCZOS)
         self.plane_photo = ImageTk.PhotoImage(self.plane_image)
         self.plane_id = self.canvas.create_image(50, 125, image=self.plane_photo)
@@ -83,7 +90,9 @@ class BettingClient:
         if message.startswith("MULTIPLIER"):
             multiplier = message.split()[1]
             self.multiplier_var.set(f"{multiplier}x")
-            self.update_plane_position(float(multiplier))
+            if not self.rotating:
+                self.rotating = True
+                self.move_plane()
         elif message == "STOPPED":
             self.reset_plane_position()
             multiplier = float(self.multiplier_var.get().replace('x', ''))
@@ -110,14 +119,47 @@ class BettingClient:
             clients_connected = int(message.split()[1])
             print(f"Clients connected: {clients_connected}")
 
-    def update_plane_position(self, multiplier):
-        new_x = multiplier * 50
-        if new_x > self.canvas.winfo_width():
-            new_x = new_x % self.canvas.winfo_width()  # Loop back to the start
-        self.canvas.coords(self.plane_id, new_x, 125)
+    def update_plane_position(self):
+        self.move_plane()
+
+    def move_plane(self):
+        # Rotate the plane based on the vertical movement direction
+        if self.direction == 1:
+            self.angle = -10  # Tilt up
+        else:
+            self.angle = 10  # Tilt down
+
+        rotated_image = self.rotate_image(self.plane_image, self.angle)
+        self.plane_photo = ImageTk.PhotoImage(rotated_image)
+
+        # Update the vertical position with a wave effect
+        self.vertical_offset += self.direction * 2
+        if self.vertical_offset > 20 or self.vertical_offset < -20:
+            self.direction *= -1  # Reverse the direction
+
+        # Randomize the vertical offset
+        self.vertical_offset += random.randint(-1, 1)
+
+        # Update the canvas position
+        canvas_width = self.canvas.winfo_width()
+        x = (self.plane_speed + self.canvas.coords(self.plane_id)[0]) % canvas_width
+        y = 125 + self.vertical_offset
+        self.canvas.itemconfig(self.plane_id, image=self.plane_photo)
+        self.canvas.coords(self.plane_id, x, y)
+
+        # Continue moving the plane
+        self.root.after(50, self.move_plane)
+
+    def rotate_image(self, image, angle):
+        rotated = image.rotate(angle, expand=True)
+        return ImageOps.exif_transpose(rotated)
 
     def reset_plane_position(self):
         self.canvas.coords(self.plane_id, 50, 125)
+        self.angle = 0
+        self.vertical_offset = 0
+        self.direction = 1
+        self.rotating = False
 
     def place_bet(self):
         bet_amount = self.bet_amount_var.get()
