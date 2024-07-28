@@ -47,11 +47,11 @@ class BettingClient:
         mid_wrapper = ttk.Frame(frame, style="TFrame")
         mid_wrapper.grid(row=1, column=0, columnspan=2, pady=20)
 
-        self.canvas = tk.Canvas(mid_wrapper, width=1920, height=500, bg='black', highlightthickness=0)
+        self.canvas = tk.Canvas(mid_wrapper, width=1920, height=400, bg='black', highlightthickness=0)#parte preta onde está o penguin
         self.canvas.grid(row=0, column=0, columnspan=2)
 
-        self.plane_image = Image.open("aqui_Igor/plane.png")
-        self.plane_image = self.plane_image.resize((50, 50), Image.ANTIALIAS)
+        self.plane_image = Image.open("aqui_Igor/aviator_jogo.png")
+        self.plane_image = self.plane_image.resize((200, 200), Image.ANTIALIAS)
         self.plane_photo = ImageTk.PhotoImage(self.plane_image)
         self.plane_id = self.canvas.create_image(960, 125, image=self.plane_photo)
 
