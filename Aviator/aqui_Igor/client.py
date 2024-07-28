@@ -8,7 +8,6 @@ class BettingClient:
     def __init__(self, root):
         self.root = root
         self.root.title("Betting Game Client")
-        self.root.geometry("1920x1080")
         self.root.configure(bg='black')
 
         self.balance_var = tk.StringVar(value="0.00")
@@ -22,7 +21,7 @@ class BettingClient:
 
         self.receiver_thread = threading.Thread(target=self.receive_messages)
         self.receiver_thread.start()
-        self.client.send("BALANCE".encode())  # Solicitar o saldo inicial do servidor
+        self.client.send("BALANCE|".encode())  # Solicitar o saldo inicial do servidor
 
     def setup_ui(self):
         style = ttk.Style()
@@ -47,13 +46,13 @@ class BettingClient:
         mid_wrapper = ttk.Frame(frame, style="TFrame")
         mid_wrapper.grid(row=1, column=0, columnspan=2, pady=20)
 
-        self.canvas = tk.Canvas(mid_wrapper, width=1920, height=400, bg='black', highlightthickness=0)#parte preta onde está o penguin
+        self.canvas = tk.Canvas(mid_wrapper, width=500, height=250, bg='black', highlightthickness=0)
         self.canvas.grid(row=0, column=0, columnspan=2)
 
-        self.plane_image = Image.open("aqui_Igor/aviator_jogo.png")
-        self.plane_image = self.plane_image.resize((200, 200), Image.ANTIALIAS)
+        self.plane_image = Image.open("plane.png")
+        self.plane_image = self.plane_image.resize((50, 50), Image.ANTIALIAS)
         self.plane_photo = ImageTk.PhotoImage(self.plane_image)
-        self.plane_id = self.canvas.create_image(960, 125, image=self.plane_photo)
+        self.plane_id = self.canvas.create_image(50, 125, image=self.plane_photo)
 
         counter_label = ttk.Label(mid_wrapper, textvariable=self.multiplier_var, style="TLabel", font=('Exo 2', 42, 'bold'), foreground='white')
         counter_label.grid(row=1, column=0, columnspan=2, pady=20)
@@ -71,60 +70,70 @@ class BettingClient:
         self.cashout_button.grid(row=1, column=0, columnspan=2, pady=10)
 
     def receive_messages(self):
+        buffer = ""
         while True:
             try:
-                message = self.client.recv(1024).decode()
-                print(f"Received message: {message}")
-                if message.startswith("MULTIPLIER"):
-                    multiplier = message.split()[1]
-                    self.multiplier_var.set(f"{multiplier}x")
-                elif message.startswith("STOPPED"):
-                    multiplier = float(self.multiplier_var.get().replace('x', ''))
-                    self.previous_multipliers.append(multiplier)
-                    if len(self.previous_multipliers) > 6:
-                        self.previous_multipliers.pop(0)
-                    self.update_previous_multipliers()
-                    self.cashout_button.config(state=tk.DISABLED)
-                    self.bet_button.config(state=tk.NORMAL)
-                    self.client.send("BALANCE".encode())
-                elif message.startswith("WINNINGS"):
-                    winnings = float(message.split()[1])
-                    new_balance = float(self.balance_var.get()) + winnings
-                    self.balance_var.set(f"{new_balance:.2f}")
-                elif message.startswith("BALANCE"):
-                    balance = float(message.split()[1])
-                    self.balance_var.set(f"{balance:.2f}")
-                elif message == "INSUFFICIENT_FUNDS":
-                    messagebox.showerror("Error", "Insufficient funds to place bet.")
+                buffer += self.client.recv(1024).decode()
+                while "|" in buffer:
+                    message, buffer = buffer.split("|", 1)
+                    self.process_message(message)
             except (ConnectionResetError, BrokenPipeError):
                 break
+
+    def process_message(self, message):
+        print(f"Received message: {message}")
+        if message.startswith("MULTIPLIER"):
+            multiplier = message.split()[1]
+            self.multiplier_var.set(f"{multiplier}x")
+            self.canvas.coords(self.plane_id, float(multiplier) * 50, 125)
+        elif message == "STOPPED":
+            self.canvas.coords(self.plane_id, 50, 125)
+            multiplier = float(self.multiplier_var.get().replace('x', ''))
+            self.previous_multipliers.append(multiplier)
+            self.update_previous_multipliers()
+            self.bet_button.config(state=tk.NORMAL)
+            self.cashout_button.config(state=tk.DISABLED)
+        elif message.startswith("WINNINGS"):
+            winnings = float(message.split()[1])
+            messagebox.showinfo("Betting Game", f"You won {winnings:.2f}!")
+        elif message.startswith("BALANCE"):
+            balance = float(message.split()[1])
+            self.balance_var.set(f"{balance:.2f}")
+        elif message == "GAME_RUNNING":
+            messagebox.showinfo("Betting Game", "A game is already running. Please wait for the next round.")
+        elif message == "INSUFFICIENT_FUNDS":
+            messagebox.showerror("Betting Game", "You do not have enough funds to place this bet.")
+        elif message.startswith("PREVIOUS_MULTIPLIER"):
+            multiplier = float(message.split()[1])
+            self.previous_multipliers.append(multiplier)
+            self.update_previous_multipliers()
+        elif message.startswith("CLIENTS_CONNECTED"):
+            clients_connected = int(message.split()[1])
+            print(f"Clients connected: {clients_connected}")
+
+
+    def place_bet(self):
+        bet_amount = self.bet_amount_var.get()
+        if bet_amount:
+            self.client.send(f"BET {bet_amount}|".encode())
+            self.bet_button.config(state=tk.DISABLED)
+            self.cashout_button.config(state=tk.NORMAL)
+
+    def cash_out(self):
+        current_multiplier = float(self.multiplier_var.get().replace('x', ''))
+        bet_amount = self.bet_amount_var.get()
+        if bet_amount:
+            self.client.send(f"CASHOUT {current_multiplier} {bet_amount}|".encode())
+            self.cashout_button.config(state=tk.DISABLED)
 
     def update_previous_multipliers(self):
         for widget in self.last_counters.winfo_children():
             widget.destroy()
         for multiplier in self.previous_multipliers:
-            label = ttk.Label(self.last_counters, text=f"{multiplier}x", style="TLabel", font=('Exo 2', 16, 'bold'))
-            label.pack(side=tk.LEFT, padx=5)
+            multiplier_label = ttk.Label(self.last_counters, text=f"{multiplier:.2f}x", style="TLabel", font=('Exo 2', 16, 'bold'), foreground='yellow')
+            multiplier_label.pack(side=tk.LEFT, padx=5)
 
-    def place_bet(self):
-        try:
-            bet_amount = float(self.bet_amount_var.get())
-            self.client.send(f"BET {bet_amount}".encode())
-            self.bet_button.config(state=tk.DISABLED)
-            self.cashout_button.config(state=tk.NORMAL)
-        except ValueError:
-            messagebox.showerror("Error", "Please enter a valid bet amount.")
-
-    def cash_out(self):
-        multiplier = float(self.multiplier_var.get().replace('x', ''))
-        bet_amount = float(self.bet_amount_var.get())
-        self.client.send(f"CASHOUT {multiplier} {bet_amount}".encode())
-        self.cashout_button.config(state=tk.DISABLED)
-
-def main():
+if __name__ == "__main__":
     root = tk.Tk()
     client = BettingClient(root)
     root.mainloop()
-
-if __name__ == "__main__":
-    main()
