@@ -8,6 +8,7 @@ class BettingClient:
     def __init__(self, root):
         self.root = root
         self.root.title("Betting Game Client")
+        self.root.geometry("1920x1080")
         self.root.configure(bg='black')
 
         self.balance_var = tk.StringVar(value="0.00")
@@ -46,13 +47,13 @@ class BettingClient:
         mid_wrapper = ttk.Frame(frame, style="TFrame")
         mid_wrapper.grid(row=1, column=0, columnspan=2, pady=20)
 
-        self.canvas = tk.Canvas(mid_wrapper, width=500, height=250, bg='black', highlightthickness=0)
+        self.canvas = tk.Canvas(mid_wrapper, width=1920, height=500, bg='black', highlightthickness=0)
         self.canvas.grid(row=0, column=0, columnspan=2)
 
-        self.plane_image = Image.open("plane.png")
+        self.plane_image = Image.open("aqui_Igor/plane.png")
         self.plane_image = self.plane_image.resize((50, 50), Image.ANTIALIAS)
         self.plane_photo = ImageTk.PhotoImage(self.plane_image)
-        self.plane_id = self.canvas.create_image(50, 125, image=self.plane_photo)
+        self.plane_id = self.canvas.create_image(960, 125, image=self.plane_photo)
 
         counter_label = ttk.Label(mid_wrapper, textvariable=self.multiplier_var, style="TLabel", font=('Exo 2', 42, 'bold'), foreground='white')
         counter_label.grid(row=1, column=0, columnspan=2, pady=20)
@@ -119,7 +120,6 @@ class BettingClient:
         bet_amount = float(self.bet_amount_var.get())
         self.client.send(f"CASHOUT {multiplier} {bet_amount}".encode())
         self.cashout_button.config(state=tk.DISABLED)
-        self.bet_button.config(state=tk.NORMAL)
 
 def main():
     root = tk.Tk()
