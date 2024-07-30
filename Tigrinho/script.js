@@ -3,13 +3,13 @@ const ICONS = [
 ];
 
 /**
- * @type {number} The minimum spin time in seconds
+ * @type {number} Spin minimo
  */
 const BASE_SPINNING_DURATION = 2.7;
 
 /**
- * @type {number} The additional duration to the base duration for each row (in seconds).
- * It makes the typical effect that the first reel ends, then the second, and so on...
+ * @type {number} Duracao adicional de cada spin
+ * Animacao de efeito cascata nos resultados
  */
 const COLUMN_SPINNING_DURATION = 0.3;
 
@@ -28,7 +28,7 @@ function setInitialItems() {
 
     for (let i = 0; i < cols.length; ++i) {
         let col = cols[i];
-        let amountOfItems = baseItemAmount + (i * 3); // Increment the amount for each column
+        let amountOfItems = baseItemAmount + (i * 3); // Valor de coluna
         let elms = '';
         let firstThreeElms = '';
 
@@ -37,49 +37,49 @@ function setInitialItems() {
             let item = '<div class="icon" data-item="' + icon + '"><img src="items/' + icon + '.png"></div>';
             elms += item;
 
-            if (x < 3) firstThreeElms += item; // Backup the first three items because the last three must be the same
+            if (x < 3) firstThreeElms += item; // Salva os 3 primeiros valores pois os ultimos são iguais
         }
         col.innerHTML = elms + firstThreeElms;
     }
 }
 
 /**
- * Called when the start-button is pressed.
+ * Começar quando aperta o botão
  *
- * @param elem The button itself
+ * @param elem botão
  */
 function spin(elem) {
     let duration = BASE_SPINNING_DURATION + randomDuration();
 
-    for (let col of cols) { // set the animation duration for each column
+    for (let col of cols) { // Definir animacao de cada coluna
         duration += COLUMN_SPINNING_DURATION + randomDuration();
         col.style.animationDuration = duration + "s";
     }
 
-    // disable the start-button
+    // Impedir rolagem infinita
     elem.setAttribute('disabled', true);
 
-    // set the spinning class so the css animation starts to play
+    // Juntar CSS com Java
     document.getElementById('container').classList.add('spinning');
 
-    // set the result delayed
-    // this would be the right place to request the combination from the server
+    // delay dos resultados
+    //(CHAMAR O SERVIDOR AQUI PARA O RESULTADO)
     window.setTimeout(setResult, BASE_SPINNING_DURATION * 1000 / 2);
 
     window.setTimeout(function () {
-        // after the spinning is done, remove the class and enable the button again
+        // quando terminar a rodada liberar o botão para começar novamente
         document.getElementById('container').classList.remove('spinning');
         elem.removeAttribute('disabled');
     }.bind(elem), duration * 1000);
 }
 
 /**
- * Sets the result items at the beginning and the end of the columns
+ * botar os resultados nas colunas no começo e fim
  */
 function setResult() {
     for (let col of cols) {
 
-        // generate 3 random items
+        //gerar 3 icones aleatorios
         let results = [
             getRandomIcon(),
             getRandomIcon(),
@@ -87,7 +87,7 @@ function setResult() {
         ];
 
         let icons = col.querySelectorAll('.icon img');
-        // replace the first and last three items of each column with the generated items
+        //Demonstrar itens do resultado na tela para parecer q foi perto
         for (let x = 0; x < 3; x++) {
             icons[x].setAttribute('src', 'items/' + results[x] + '.png');
             icons[(icons.length - 3) + x].setAttribute('src', 'items/' + results[x] + '.png');
