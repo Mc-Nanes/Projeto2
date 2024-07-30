@@ -20,8 +20,8 @@ class BettingClient:
         
         self.stopped = False
 
-        pygame.mixer.init()
-        self.play_music()
+        #pygame.mixer.init()
+        #self.play_music()
 
 
         # Load background image for the client window
