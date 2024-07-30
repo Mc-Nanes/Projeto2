@@ -71,9 +71,6 @@ def game_loop():
     global is_game_running, current_multiplier, previous_multipliers
     stop_multiplier = random.uniform(1.0, 20.0)
     print(f"Multiplicador de parada definido para {stop_multiplier:.2f}")
-    vertical_position = 0.0
-    vertical_direction = random.choice([-1, 1])  # -1 para descida, 1 para subida
-
     current_multiplier = 1.0  # Reiniciar o multiplicador
 
     vertical_position = 180
