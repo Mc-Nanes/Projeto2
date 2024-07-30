@@ -1,34 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Sloty</title>
-    <link rel="stylesheet" href="./style.css">
-    <script src="./script.js" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pinguinzinho</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div id="saldo">Saldo: R$100,00</div>
+  <div class="slots">
+    <div class="reel"></div>
+    <div class="reel"></div>
+    <div class="reel"></div>
+  </div>
+  <div id="debug" class="debug"></div>
 
-<div id="container">
-    <div class="window-border">
-        <div class="window">
-            <div class="outer-spacer"></div>
-            <div class="outer-col">
-                <div class="col"></div>
-            </div>
-            <div class="outer-spacer"></div>
-            <div class="outer-col">
-                <div class="col"></div>
-            </div>
-            <div class="outer-spacer"></div>
-            <div class="outer-col">
-                <div class="col"></div>
-            </div>
-            <div class="outer-spacer"></div>
-        </div>
-    </div>
+  <img style="position:fixed; left: 0; top: 0; height: 100vh; width: auto;" src="https://assets.codepen.io/439000/slotreel.webp">
 
-    <input type="button" onclick="spin(this)" class="start-button" value="Spin"/>
-</div>
+  <a target="_blank" href="https://codepen.io/josfabre/pens/public" style="position: fixed; left: 8em; top: 1em; font-family: Sans-Serif; color: #333; font-size: 13px; text-decoration: none; text-transform: uppercase; padding: 0.5em 1em; border: 1px solid #333; border-radius: 6px; opacity: 0.9;">All my pens</a>
 
+  <button id="rollButton">Spin</button>
+  <script src="script.js"></script>
 </body>
 </html>

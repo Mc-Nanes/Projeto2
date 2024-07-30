@@ -1,110 +1,114 @@
-const ICONS = [
-    'apple', 'apricot', 'banana', 'big_win', 'cherry', 'grapes', 'lemon', 'lucky_seven', 'orange', 'pear', 'strawberry', 'watermelon',
-];
+/**
+ * Setup
+ */
+const debugEl = document.getElementById('debug'),
+    // Mapping of indexes to icons: start from banana in middle of initial position and then upwards
+    rollButton = document.getElementById('rollButton');
+    saldoEl = document.getElementById('saldo')
+    iconMap = ["banana", "seven", "cherry", "plum", "orange", "bell", "bar", "lemon", "melon"],
+    // Width of the icons
+    icon_width = 79,
+    // Height of one icon in the strip
+    icon_height = 79,
+    // Number of icons in the strip
+    num_icons = 9,
+    // Max-speed in ms for animating one icon down
+    time_per_icon = 100,
+    // Holds icon indexes
+    indexes = [0, 0, 0];
+
+let saldo = 100;
+
+// Deduct cost of roll
+const deductCost = () => {
+    saldo -= 10;
+    updateSaldo();
+};
+
+// Add winnings
+const addWinnings = () => {
+    saldo += 30;
+    updateSaldo();
+};
+
+const updateSaldo = () =>{
+    saldoEl.textContent = 'Saldo: R$' + saldo.toFixed(2);
+}
 
 /**
- * @type {number} Spin minimo
+ * Roll one reel
  */
-const BASE_SPINNING_DURATION = 2.7;
+const roll = (reel, offset = 0) => {
+    // Minimum of 2 + the reel offset rounds
+    const delta = (offset + 2) * num_icons + Math.round(Math.random() * num_icons);
+
+    // Return promise so we can wait for all reels to finish
+    return new Promise((resolve, reject) => {
+        const style = getComputedStyle(reel),
+            // Current background position
+            backgroundPositionY = parseFloat(style["background-position-y"]),
+            // Target background position
+            targetBackgroundPositionY = backgroundPositionY + delta * icon_height,
+            // Normalized background position, for reset
+            normTargetBackgroundPositionY = targetBackgroundPositionY % (num_icons * icon_height);
+
+        // Delay animation with timeout, for some reason a delay in the animation property causes stutter
+        setTimeout(() => {
+            // Set transition properties ==> https://cubic-bezier.com/#.41,-0.01,.63,1.09
+            reel.style.transition = `background-position-y ${(8 + 1 * delta) * time_per_icon}ms cubic-bezier(.41,-0.01,.63,1.09)`;
+            // Set background position
+            reel.style.backgroundPositionY = `${targetBackgroundPositionY}px`;
+        }, offset * 150);
+
+        // After animation
+        setTimeout(() => {
+            // Reset position, so that it doesn't get higher without limit
+            reel.style.transition = `none`;
+            reel.style.backgroundPositionY = `${normTargetBackgroundPositionY}px`;
+            // Resolve this promise
+            resolve(delta % num_icons);
+        }, (8 + 1 * delta) * time_per_icon + offset * 150);
+    });
+};
 
 /**
- * @type {number} Duracao adicional de cada spin
- * Animacao de efeito cascata nos resultados
+ * Roll all reels, when promise resolves roll again
  */
-const COLUMN_SPINNING_DURATION = 0.3;
-
-
-var cols;
-
-
-window.addEventListener('DOMContentLoaded', function(event) {
-    cols = document.querySelectorAll('.col');
-
-    setInitialItems();
-});
-
-function setInitialItems() {
-    let baseItemAmount = 40;
-
-    for (let i = 0; i < cols.length; ++i) {
-        let col = cols[i];
-        let amountOfItems = baseItemAmount + (i * 3); // Valor de coluna
-        let elms = '';
-        let firstThreeElms = '';
-
-        for (let x = 0; x < amountOfItems; x++) {
-            let icon = getRandomIcon();
-            let item = '<div class="icon" data-item="' + icon + '"><img src="items/' + icon + '.png"></div>';
-            elms += item;
-
-            if (x < 3) firstThreeElms += item; // Salva os 3 primeiros valores pois os ultimos são iguais
-        }
-        col.innerHTML = elms + firstThreeElms;
+function rollAll() {
+    if(saldo < 10){
+        alert("Saldo Insuficiente");
+        return;
     }
-}
+    rollButton.disabled = true;
+    deductCost();
+    debugEl.textContent = 'rolling...';
 
-/**
- * Começar quando aperta o botão
- *
- * @param elem botão
- */
-function spin(elem) {
-    let duration = BASE_SPINNING_DURATION + randomDuration();
+    const reelsList = document.querySelectorAll('.slots > .reel');
 
-    for (let col of cols) { // Definir animacao de cada coluna
-        duration += COLUMN_SPINNING_DURATION + randomDuration();
-        col.style.animationDuration = duration + "s";
-    }
+    Promise
+        // Activate each reel, must convert NodeList to Array for this with spread operator
+        .all([...reelsList].map((reel, i) => roll(reel, i)))
+        // When all reels done animating (all promises solve)
+        .then((deltas) => {
+            // add up indexes
+            deltas.forEach((delta, i) => indexes[i] = (indexes[i] + delta) % num_icons);
+            debugEl.textContent = indexes.map((i) => iconMap[i]).join(' - ');
 
-    // Impedir rolagem infinita
-    elem.setAttribute('disabled', true);
+            // Win conditions
+            if (indexes[0] == indexes[1] || indexes[1] == indexes[2]) {
+                const winCls = indexes[0] == indexes[2] ? "win2" : "win1";
+                document.querySelector(".slots").classList.add(winCls);
+                setTimeout(() => document.querySelector(".slots").classList.remove(winCls), 2000);
+                addWinnings();
+            }
 
-    // Juntar CSS com Java
-    document.getElementById('container').classList.add('spinning');
+            // Again!
+            //setTimeout(rollAll, 3000);
+            rollButton.disabled = false;
+        });
+};
 
-    // delay dos resultados
-    //(CHAMAR O SERVIDOR AQUI PARA O RESULTADO)
-    window.setTimeout(setResult, BASE_SPINNING_DURATION * 1000 / 2);
-
-    window.setTimeout(function () {
-        // quando terminar a rodada liberar o botão para começar novamente
-        document.getElementById('container').classList.remove('spinning');
-        elem.removeAttribute('disabled');
-    }.bind(elem), duration * 1000);
-}
-
-/**
- * botar os resultados nas colunas no começo e fim
- */
-function setResult() {
-    for (let col of cols) {
-
-        //gerar 3 icones aleatorios
-        let results = [
-            getRandomIcon(),
-            getRandomIcon(),
-            getRandomIcon()
-        ];
-
-        let icons = col.querySelectorAll('.icon img');
-        //Demonstrar itens do resultado na tela para parecer q foi perto
-        for (let x = 0; x < 3; x++) {
-            icons[x].setAttribute('src', 'items/' + results[x] + '.png');
-            icons[(icons.length - 3) + x].setAttribute('src', 'items/' + results[x] + '.png');
-        }
-    }
-    if (results[0] == results[1] == results[2]){
-        window.alert("you won!!");
-    }
-}
-
-function getRandomIcon() {
-    return ICONS[Math.floor(Math.random() * ICONS.length)];
-}
-
-/**
- * @returns {number} 0.00 to 0.09 inclusive
- */
-function randomDuration() {
-    return Math.floor(Math.random() * 10) / 100;
-}
+// Add event listener to the button
+rollButton.addEventListener('click', rollAll);
+//Add balance display
+updateSaldo();
