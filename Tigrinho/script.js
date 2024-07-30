@@ -5,11 +5,11 @@ const debugEl = document.getElementById('debug'),
     // Mapping of indexes to icons: start from banana in middle of initial position and then upwards
     rollButton = document.getElementById('rollButton');
     saldoEl = document.getElementById('saldo')
-    iconMap = ["banana", "seven", "cherry", "plum", "orange", "bell", "bar", "lemon", "melon"],
+    iconMap = ["ILHA", "IGLU", "AGENTE", "URSO", "BICHO FELIZ", "MESTRE", "BICHO PUTO", "PIRATA", "IDOSO"],
     // Width of the icons
-    icon_width = 79,
+    icon_width = 74,
     // Height of one icon in the strip
-    icon_height = 79,
+    icon_height = 78,
     // Number of icons in the strip
     num_icons = 9,
     // Max-speed in ms for animating one icon down
@@ -26,8 +26,8 @@ const deductCost = () => {
 };
 
 // Add winnings
-const addWinnings = () => {
-    saldo += 30;
+const addWinnings = (money) => {
+    saldo += money;
     updateSaldo();
 };
 
@@ -92,14 +92,18 @@ function rollAll() {
         .then((deltas) => {
             // add up indexes
             deltas.forEach((delta, i) => indexes[i] = (indexes[i] + delta) % num_icons);
-            debugEl.textContent = indexes.map((i) => iconMap[i]).join(' - ');
+            //debugEl.textContent = indexes.map((i) => iconMap[i]).join(' - ');
 
             // Win conditions
             if (indexes[0] == indexes[1] || indexes[1] == indexes[2]) {
                 const winCls = indexes[0] == indexes[2] ? "win2" : "win1";
+                if (winCls == "win1"){
+                    addWinnings(30)
+                } else {
+                    addWinnings(50)
+                }
                 document.querySelector(".slots").classList.add(winCls);
                 setTimeout(() => document.querySelector(".slots").classList.remove(winCls), 2000);
-                addWinnings();
             }
 
             // Again!
