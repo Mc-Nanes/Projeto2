@@ -5,8 +5,6 @@ from tkinter import messagebox
 from PIL import Image, ImageTk, ImageOps
 import random
 import os
-import pygame 
-
 
 class BettingClient:
     def __init__(self, root):
@@ -19,9 +17,6 @@ class BettingClient:
         self.rotation_interval = 1000  
         
         self.stopped = False
-
-        #pygame.mixer.init()
-        #self.play_music()
 
 
         # Load background image for the client window
@@ -164,8 +159,7 @@ class BettingClient:
 
     def exit_application(self):
         self.root.destroy()  # Fecha a janela Tkinter
-        pygame.mixer.music.stop()  # Para a música ao sair
-        os._exit(0) 
+        os._exit(0)
       
 
     def receive_messages(self):
@@ -192,6 +186,8 @@ class BettingClient:
             self.update_plane_position(position, vertical_position)
         elif message == "STOPPED":
             self.reset_plane_position()
+            multiplier = float(self.multiplier_var.get().replace('x', ''))
+            self.previous_multipliers.append(multiplier)
             self.update_previous_multipliers()
             self.bet_button.config(state=tk.NORMAL)
             self.cashout_button.config(state=tk.DISABLED)
@@ -259,15 +255,6 @@ class BettingClient:
             bg='#216ead'  # Cor do fundo para o botão ativo
         )
 
-    def play_music(self):
-        # Carrega e reproduz a música em loop
-        music_path = r"C:\Users\igorl\Documents\Redes 2ee\Projeto2\aqui_Igor\background_music.mp3"  # Caminho para o arquivo de música
-        if os.path.exists(music_path):
-            pygame.mixer.music.load(music_path)
-            pygame.mixer.music.play(-1)  # O argumento -1 faz a música tocar em loop
-        else:
-            print("Arquivo de música não encontrado.")
-
     def cash_out(self):
         if self.has_bet:  # Verificar se uma aposta foi feita antes de permitir o cashout
             current_multiplier = float(self.multiplier_var.get().replace('x', ''))
@@ -286,7 +273,6 @@ class BettingClient:
 
     def close_connection(self):
             self.client.close()
-            
 
 if __name__ == "__main__":
     root = tk.Tk()
